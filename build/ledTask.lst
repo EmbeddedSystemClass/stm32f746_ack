@@ -1,0 +1,1121 @@
+ARM GAS  /tmp/ccfYCR6f.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.eabi_attribute 27, 1
+   3              		.eabi_attribute 28, 1
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"ledTask.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.ledNotifyToClient,"ax",%progbits
+  18              		.align	1
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu fpv5-sp-d16
+  24              	ledNotifyToClient:
+  25              	.LFB11:
+  26              		.file 1 "Src/ledTask.c"
+   1:Src/ledTask.c **** /*
+   2:Src/ledTask.c ****  * To change this license header, choose License Headers in Project Properties.
+   3:Src/ledTask.c ****  * To change this template file, choose Tools | Templates
+   4:Src/ledTask.c ****  * and open the template in the editor.
+   5:Src/ledTask.c ****  */
+   6:Src/ledTask.c **** 
+   7:Src/ledTask.c **** 
+   8:Src/ledTask.c **** /* Simple LED Task for ack based implementation 
+   9:Src/ledTask.c ****  * I hope you to get a good idea from this project.
+  10:Src/ledTask.c **** */
+  11:Src/ledTask.c **** 
+  12:Src/ledTask.c **** /****************************************************************************/
+  13:Src/ledTask.c **** /** **/
+  14:Src/ledTask.c **** /** MODULES USED **/
+  15:Src/ledTask.c **** /** **/
+  16:Src/ledTask.c **** /****************************************************************************/
+  17:Src/ledTask.c **** #include <stdio.h>
+  18:Src/ledTask.c **** #include "cmsis_os.h"
+  19:Src/ledTask.c **** #include "led.h"
+  20:Src/ledTask.c **** 
+  21:Src/ledTask.c **** 
+  22:Src/ledTask.c **** /****************************************************************************/
+  23:Src/ledTask.c **** /** **/
+  24:Src/ledTask.c **** /** DEFINITIONS AND MACROS **/
+  25:Src/ledTask.c **** /** **/
+  26:Src/ledTask.c **** /****************************************************************************/
+  27:Src/ledTask.c **** #define TASK_NOTIFY_ALL_BITS 0xFFFFFFFF
+  28:Src/ledTask.c **** 
+  29:Src/ledTask.c **** /****************************************************************************/
+  30:Src/ledTask.c **** /** **/
+  31:Src/ledTask.c **** /** TYPEDEFS AND STRUCTURES **/
+  32:Src/ledTask.c **** /** **/
+ARM GAS  /tmp/ccfYCR6f.s 			page 2
+
+
+  33:Src/ledTask.c **** /****************************************************************************/
+  34:Src/ledTask.c **** 
+  35:Src/ledTask.c **** /****************************************************************************/
+  36:Src/ledTask.c **** /** **/
+  37:Src/ledTask.c **** /** PROTOTYPES OF LOCAL FUNCTIONS **/
+  38:Src/ledTask.c **** /** **/
+  39:Src/ledTask.c **** /****************************************************************************/
+  40:Src/ledTask.c **** 
+  41:Src/ledTask.c **** /****************************************************************************/
+  42:Src/ledTask.c **** /** **/
+  43:Src/ledTask.c **** /** EXPORTED VARIABLES **/
+  44:Src/ledTask.c **** /** **/
+  45:Src/ledTask.c **** /****************************************************************************/
+  46:Src/ledTask.c **** 
+  47:Src/ledTask.c **** /****************************************************************************/
+  48:Src/ledTask.c **** /** **/
+  49:Src/ledTask.c **** /** GLOBAL VARIABLES **/
+  50:Src/ledTask.c **** /** **/
+  51:Src/ledTask.c **** /****************************************************************************/
+  52:Src/ledTask.c **** /* Task Handle*/
+  53:Src/ledTask.c **** osThreadId lEDTaskHandle;
+  54:Src/ledTask.c **** /* Queue */
+  55:Src/ledTask.c **** QueueHandle_t lEDReceiveMsgQueue = NULL;
+  56:Src/ledTask.c **** /* Mutex */
+  57:Src/ledTask.c **** osMutexId LEDMutexHandle;
+  58:Src/ledTask.c **** /* Timer */
+  59:Src/ledTask.c **** osTimerId LEDTimerHandle;
+  60:Src/ledTask.c **** 
+  61:Src/ledTask.c **** /****************************************************************************/
+  62:Src/ledTask.c **** /** **/
+  63:Src/ledTask.c **** /** LOCAL VARIABLES **/
+  64:Src/ledTask.c **** /** **/
+  65:Src/ledTask.c **** /****************************************************************************/
+  66:Src/ledTask.c **** static TickType_t xTicksToWait;
+  67:Src/ledTask.c **** 
+  68:Src/ledTask.c **** /****************************************************************************/
+  69:Src/ledTask.c **** /** **/
+  70:Src/ledTask.c **** /** EXPORTED FUNCTIONS **/
+  71:Src/ledTask.c **** /** **/
+  72:Src/ledTask.c **** /****************************************************************************/
+  73:Src/ledTask.c **** 
+  74:Src/ledTask.c **** /****************************************************************************/
+  75:Src/ledTask.c **** /** **/
+  76:Src/ledTask.c **** /** GLOBAL FUNCTIONS **/
+  77:Src/ledTask.c **** /** **/
+  78:Src/ledTask.c **** /****************************************************************************/
+  79:Src/ledTask.c **** 
+  80:Src/ledTask.c **** void StartLedTask(void const * argument);
+  81:Src/ledTask.c **** 
+  82:Src/ledTask.c **** /****************************************************************************/
+  83:Src/ledTask.c **** /** **/
+  84:Src/ledTask.c **** /** LOCAL FUNCTIONS **/
+  85:Src/ledTask.c **** /** **/
+  86:Src/ledTask.c **** /****************************************************************************/
+  87:Src/ledTask.c **** void ledSendSimpleEvent(LED_EVENT Evt, int data, unsigned char ack);
+  88:Src/ledTask.c **** 
+  89:Src/ledTask.c **** 
+ARM GAS  /tmp/ccfYCR6f.s 			page 3
+
+
+  90:Src/ledTask.c **** BaseType_t ledSendEvent(LED_MSG message) {
+  91:Src/ledTask.c ****     BaseType_t ret = 0;
+  92:Src/ledTask.c ****     ret = xQueueSendToBack(lEDReceiveMsgQueue, &message, xTicksToWait);
+  93:Src/ledTask.c ****     osSignalSet(lEDTaskHandle, LED_CMD_Q_SIG);
+  94:Src/ledTask.c ****     return ret;
+  95:Src/ledTask.c **** }
+  96:Src/ledTask.c **** 
+  97:Src/ledTask.c **** void ledSendSimpleEvent(LED_EVENT Evt, int data, unsigned char ack) {
+  98:Src/ledTask.c ****     LED_MSG msg;
+  99:Src/ledTask.c ****     msg.cmd = Evt;
+ 100:Src/ledTask.c ****     msg.ack = ack;
+ 101:Src/ledTask.c ****     msg.nData = data;
+ 102:Src/ledTask.c ****     msg.pData = NULL;
+ 103:Src/ledTask.c ****     msg.len = 0;
+ 104:Src/ledTask.c ****     ledSendEvent(msg);
+ 105:Src/ledTask.c **** }
+ 106:Src/ledTask.c **** 
+ 107:Src/ledTask.c **** /* 
+ 108:Src/ledTask.c ****  * Ack to client task.
+ 109:Src/ledTask.c ****  * If you know who is client and its queue you can send message.
+ 110:Src/ledTask.c ****  * 
+ 111:Src/ledTask.c **** */
+ 112:Src/ledTask.c **** static void ledNotifyAckToClient(LED_EVENT e) {
+ 113:Src/ledTask.c ****     eTaskState taskState;
+ 114:Src/ledTask.c ****     osThreadId clientTask;
+ 115:Src/ledTask.c **** 
+ 116:Src/ledTask.c ****     if (osMutexWait(LEDMutexHandle, portMAX_DELAY) != osOK) {
+ 117:Src/ledTask.c ****         configASSERT(0);
+ 118:Src/ledTask.c ****     }
+ 119:Src/ledTask.c **** 
+ 120:Src/ledTask.c ****     clientTask = ledGetClientTaskId(e);
+ 121:Src/ledTask.c ****     taskState = eTaskGetState(clientTask);
+ 122:Src/ledTask.c ****     if (taskState >= eRunning && taskState < eDeleted ) {
+ 123:Src/ledTask.c ****         xTaskNotify(clientTask, LED_ACK_SIG, eSetBits);
+ 124:Src/ledTask.c ****     }
+ 125:Src/ledTask.c **** 
+ 126:Src/ledTask.c ****     if(osMutexRelease(LEDMutexHandle) != osOK) {
+ 127:Src/ledTask.c ****         configASSERT(0);
+ 128:Src/ledTask.c ****     }
+ 129:Src/ledTask.c **** }
+ 130:Src/ledTask.c **** 
+ 131:Src/ledTask.c **** static void ledNotifyToClient(LED_EVENT e) {
+  27              		.loc 1 131 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              	.LVL0:
+  32 0000 10B5     		push	{r4, lr}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 8
+  35              		.cfi_offset 4, -8
+  36              		.cfi_offset 14, -4
+  37 0002 0446     		mov	r4, r0
+ 132:Src/ledTask.c ****     eTaskState taskState;
+ 133:Src/ledTask.c ****     osThreadId clientTask;
+ 134:Src/ledTask.c **** 
+ 135:Src/ledTask.c ****     if (osMutexWait(LEDMutexHandle, portMAX_DELAY) != osOK) {
+ARM GAS  /tmp/ccfYCR6f.s 			page 4
+
+
+  38              		.loc 1 135 0
+  39 0004 4FF0FF31 		mov	r1, #-1
+  40 0008 174B     		ldr	r3, .L8
+  41 000a 1868     		ldr	r0, [r3]
+  42              	.LVL1:
+  43 000c FFF7FEFF 		bl	osMutexWait
+  44              	.LVL2:
+  45 0010 50B1     		cbz	r0, .L2
+  46              	.LBB10:
+  47              	.LBB11:
+  48              		.file 2 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h"
+   1:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*
+   2:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * FreeRTOS Kernel V10.2.1
+   3:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+   4:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+   5:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * Permission is hereby granted, free of charge, to any person obtaining a copy of
+   6:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * this software and associated documentation files (the "Software"), to deal in
+   7:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * the Software without restriction, including without limitation the rights to
+   8:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+   9:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * the Software, and to permit persons to whom the Software is furnished to do so,
+  10:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * subject to the following conditions:
+  11:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  12:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * The above copyright notice and this permission notice shall be included in all
+  13:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * copies or substantial portions of the Software.
+  14:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  15:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  16:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  17:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  18:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  19:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  20:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  21:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  22:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * http://www.FreeRTOS.org
+  23:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * http://aws.amazon.com/freertos
+  24:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  25:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * 1 tab == 4 spaces!
+  26:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  */
+  27:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  28:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  29:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifndef PORTMACRO_H
+  30:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define PORTMACRO_H
+  31:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  32:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifdef __cplusplus
+  33:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** extern "C" {
+  34:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+  35:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  36:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------
+  37:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * Port specific definitions.
+  38:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  39:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * The settings in this file configure FreeRTOS correctly for the
+  40:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * given hardware and compiler.
+  41:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *
+  42:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  * These settings should not be altered.
+  43:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  *-----------------------------------------------------------
+  44:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h ****  */
+  45:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  46:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Type definitions. */
+ARM GAS  /tmp/ccfYCR6f.s 			page 5
+
+
+  47:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portCHAR		char
+  48:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portFLOAT		float
+  49:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portDOUBLE		double
+  50:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portLONG		long
+  51:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portSHORT		short
+  52:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portSTACK_TYPE	uint32_t
+  53:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portBASE_TYPE	long
+  54:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  55:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** typedef portSTACK_TYPE StackType_t;
+  56:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** typedef long BaseType_t;
+  57:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** typedef unsigned long UBaseType_t;
+  58:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  59:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #if( configUSE_16_BIT_TICKS == 1 )
+  60:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	typedef uint16_t TickType_t;
+  61:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portMAX_DELAY ( TickType_t ) 0xffff
+  62:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #else
+  63:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	typedef uint32_t TickType_t;
+  64:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portMAX_DELAY ( TickType_t ) 0xffffffffUL
+  65:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  66:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
+  67:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	not need to be guarded with a critical section. */
+  68:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portTICK_TYPE_IS_ATOMIC 1
+  69:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+  70:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+  71:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  72:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Architecture specifics. */
+  73:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portSTACK_GROWTH			( -1 )
+  74:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portTICK_PERIOD_MS			( ( TickType_t ) 1000 / configTICK_RATE_HZ )
+  75:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portBYTE_ALIGNMENT			8
+  76:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+  77:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  78:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Scheduler utilities. */
+  79:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portYIELD() 															\
+  80:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** {																				\
+  81:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Set a PendSV to request a context switch. */								\
+  82:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;								\
+  83:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 																				\
+  84:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Barriers are normally not required but do ensure the code is completely	\
+  85:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	within the specified behaviour for the architecture. */						\
+  86:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	__asm volatile( "dsb" ::: "memory" );										\
+  87:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	__asm volatile( "isb" );													\
+  88:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** }
+  89:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  90:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portNVIC_INT_CTRL_REG		( * ( ( volatile uint32_t * ) 0xe000ed04 ) )
+  91:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portNVIC_PENDSVSET_BIT		( 1UL << 28UL )
+  92:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portEND_SWITCHING_ISR( xSwitchRequired ) if( xSwitchRequired != pdFALSE ) portYIELD()
+  93:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portYIELD_FROM_ISR( x ) portEND_SWITCHING_ISR( x )
+  94:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+  95:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+  96:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Critical section management. */
+  97:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** extern void vPortEnterCritical( void );
+  98:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** extern void vPortExitCritical( void );
+  99:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portSET_INTERRUPT_MASK_FROM_ISR()		ulPortRaiseBASEPRI()
+ 100:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portCLEAR_INTERRUPT_MASK_FROM_ISR(x)	vPortSetBASEPRI(x)
+ 101:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portDISABLE_INTERRUPTS()				vPortRaiseBASEPRI()
+ 102:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portENABLE_INTERRUPTS()					vPortSetBASEPRI(0)
+ 103:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portENTER_CRITICAL()					vPortEnterCritical()
+ARM GAS  /tmp/ccfYCR6f.s 			page 6
+
+
+ 104:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portEXIT_CRITICAL()						vPortExitCritical()
+ 105:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 106:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+ 107:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 108:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Task function macros as described on the FreeRTOS.org WEB site.  These are
+ 109:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** not necessary for to use this port.  They are defined so the common demo files
+ 110:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** (which build with all the ports) will build. */
+ 111:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portTASK_FUNCTION_PROTO( vFunction, pvParameters ) void vFunction( void *pvParameters )
+ 112:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portTASK_FUNCTION( vFunction, pvParameters ) void vFunction( void *pvParameters )
+ 113:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+ 114:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 115:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Tickless idle/low power functionality. */
+ 116:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifndef portSUPPRESS_TICKS_AND_SLEEP
+ 117:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
+ 118:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime ) vPortSuppressTicksAndSleep( xExpectedIdl
+ 119:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+ 120:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+ 121:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 122:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* Architecture specific optimisations. */
+ 123:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
+ 124:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
+ 125:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+ 126:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 127:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
+ 128:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 129:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Generic helper function. */
+ 130:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	__attribute__( ( always_inline ) ) static inline uint8_t ucPortCountLeadingZeros( uint32_t ulBitma
+ 131:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	{
+ 132:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	uint8_t ucReturn;
+ 133:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 134:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 		__asm volatile ( "clz %0, %1" : "=r" ( ucReturn ) : "r" ( ulBitmap ) : "memory" );
+ 135:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 		return ucReturn;
+ 136:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	}
+ 137:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 138:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Check the configuration. */
+ 139:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#if( configMAX_PRIORITIES > 32 )
+ 140:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 		#error configUSE_PORT_OPTIMISED_TASK_SELECTION can only be set to 1 when configMAX_PRIORITIES is 
+ 141:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#endif
+ 142:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 143:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Store/clear the ready priorities in a bit map. */
+ 144:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities ) ( uxReadyPriorities ) |= ( 1UL 
+ 145:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities ) ( uxReadyPriorities ) &= ~( 1UL 
+ 146:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 147:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/*-----------------------------------------------------------*/
+ 148:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 149:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities ) uxTopPriority = ( 31UL - ( ui
+ 150:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 151:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+ 152:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 153:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+ 154:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 155:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifdef configASSERT
+ 156:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	void vPortValidateInterruptPriority( void );
+ 157:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 	vPortValidateInterruptPriority()
+ 158:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+ 159:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 160:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /* portNOP() is not required by this port. */
+ARM GAS  /tmp/ccfYCR6f.s 			page 7
+
+
+ 161:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portNOP()
+ 162:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 163:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #define portINLINE	__inline
+ 164:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 165:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #ifndef portFORCE_INLINE
+ 166:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	#define portFORCE_INLINE inline __attribute__(( always_inline))
+ 167:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** #endif
+ 168:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 169:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** portFORCE_INLINE static BaseType_t xPortIsInsideInterrupt( void )
+ 170:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** {
+ 171:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** uint32_t ulCurrentInterrupt;
+ 172:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** BaseType_t xReturn;
+ 173:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 174:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	/* Obtain the number of the currently executing interrupt. */
+ 175:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	__asm volatile( "mrs %0, ipsr" : "=r"( ulCurrentInterrupt ) :: "memory" );
+ 176:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 177:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	if( ulCurrentInterrupt == 0 )
+ 178:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	{
+ 179:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 		xReturn = pdFALSE;
+ 180:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	}
+ 181:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	else
+ 182:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	{
+ 183:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 		xReturn = pdTRUE;
+ 184:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	}
+ 185:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 186:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	return xReturn;
+ 187:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** }
+ 188:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 189:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** /*-----------------------------------------------------------*/
+ 190:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 191:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** portFORCE_INLINE static void vPortRaiseBASEPRI( void )
+ 192:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** {
+ 193:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** uint32_t ulNewBASEPRI;
+ 194:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 
+ 195:Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h **** 	__asm volatile
+  49              		.loc 2 195 0
+  50              		.syntax unified
+  51              	@ 195 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h" 1
+  52 0012 4FF05003 			mov r3, #80												
+  53 0016 72B6     		cpsid i													
+  54 0018 83F31188 		msr basepri, r3											
+  55 001c BFF36F8F 		isb														
+  56 0020 BFF34F8F 		dsb														
+  57 0024 62B6     		cpsie i													
+  58              	
+  59              	@ 0 "" 2
+  60              	.LVL3:
+  61              		.thumb
+  62              		.syntax unified
+  63              	.L3:
+  64 0026 FEE7     		b	.L3
+  65              	.L2:
+  66              	.LBE11:
+  67              	.LBE10:
+ 136:Src/ledTask.c ****         configASSERT(0);
+ 137:Src/ledTask.c ****     }
+ 138:Src/ledTask.c **** 
+ARM GAS  /tmp/ccfYCR6f.s 			page 8
+
+
+ 139:Src/ledTask.c ****     clientTask = ledGetClientTaskId(e);
+  68              		.loc 1 139 0
+  69 0028 2046     		mov	r0, r4
+  70 002a FFF7FEFF 		bl	ledGetClientTaskId
+  71              	.LVL4:
+  72 002e 0446     		mov	r4, r0
+  73              	.LVL5:
+ 140:Src/ledTask.c ****     taskState = eTaskGetState(clientTask);
+  74              		.loc 1 140 0
+  75 0030 FFF7FEFF 		bl	eTaskGetState
+  76              	.LVL6:
+ 141:Src/ledTask.c ****     if (taskState >= eRunning && taskState < eDeleted ) {
+  77              		.loc 1 141 0
+  78 0034 0328     		cmp	r0, #3
+  79 0036 06D8     		bhi	.L4
+ 142:Src/ledTask.c ****         xTaskNotify(clientTask, LED_NOTIFY_SIG, eSetBits);
+  80              		.loc 1 142 0
+  81 0038 0023     		movs	r3, #0
+  82 003a 0122     		movs	r2, #1
+  83 003c 4FF00051 		mov	r1, #536870912
+  84 0040 2046     		mov	r0, r4
+  85              	.LVL7:
+  86 0042 FFF7FEFF 		bl	xTaskGenericNotify
+  87              	.LVL8:
+  88              	.L4:
+ 143:Src/ledTask.c ****     }
+ 144:Src/ledTask.c **** 
+ 145:Src/ledTask.c ****     if(osMutexRelease(LEDMutexHandle) != osOK) {
+  89              		.loc 1 145 0
+  90 0046 084B     		ldr	r3, .L8
+  91 0048 1868     		ldr	r0, [r3]
+  92 004a FFF7FEFF 		bl	osMutexRelease
+  93              	.LVL9:
+  94 004e 50B1     		cbz	r0, .L1
+  95              	.LBB12:
+  96              	.LBB13:
+  97              		.loc 2 195 0
+  98              		.syntax unified
+  99              	@ 195 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h" 1
+ 100 0050 4FF05003 			mov r3, #80												
+ 101 0054 72B6     		cpsid i													
+ 102 0056 83F31188 		msr basepri, r3											
+ 103 005a BFF36F8F 		isb														
+ 104 005e BFF34F8F 		dsb														
+ 105 0062 62B6     		cpsie i													
+ 106              	
+ 107              	@ 0 "" 2
+ 108              	.LVL10:
+ 109              		.thumb
+ 110              		.syntax unified
+ 111              	.L6:
+ 112 0064 FEE7     		b	.L6
+ 113              	.L1:
+ 114              	.LBE13:
+ 115              	.LBE12:
+ 146:Src/ledTask.c ****         configASSERT(0);
+ 147:Src/ledTask.c ****     }
+ARM GAS  /tmp/ccfYCR6f.s 			page 9
+
+
+ 148:Src/ledTask.c **** }
+ 116              		.loc 1 148 0
+ 117 0066 10BD     		pop	{r4, pc}
+ 118              	.LVL11:
+ 119              	.L9:
+ 120              		.align	2
+ 121              	.L8:
+ 122 0068 00000000 		.word	LEDMutexHandle
+ 123              		.cfi_endproc
+ 124              	.LFE11:
+ 126              		.section	.text.ledSendEvent,"ax",%progbits
+ 127              		.align	1
+ 128              		.global	ledSendEvent
+ 129              		.syntax unified
+ 130              		.thumb
+ 131              		.thumb_func
+ 132              		.fpu fpv5-sp-d16
+ 134              	ledSendEvent:
+ 135              	.LFB8:
+  90:Src/ledTask.c ****     BaseType_t ret = 0;
+ 136              		.loc 1 90 0
+ 137              		.cfi_startproc
+ 138              		@ args = 0, pretend = 0, frame = 16
+ 139              		@ frame_needed = 0, uses_anonymous_args = 0
+ 140 0000 10B5     		push	{r4, lr}
+ 141              	.LCFI1:
+ 142              		.cfi_def_cfa_offset 8
+ 143              		.cfi_offset 4, -8
+ 144              		.cfi_offset 14, -4
+ 145 0002 84B0     		sub	sp, sp, #16
+ 146              	.LCFI2:
+ 147              		.cfi_def_cfa_offset 24
+ 148 0004 6C46     		mov	r4, sp
+ 149 0006 84E80F00 		stm	r4, {r0, r1, r2, r3}
+ 150              	.LVL12:
+  92:Src/ledTask.c ****     osSignalSet(lEDTaskHandle, LED_CMD_Q_SIG);
+ 151              		.loc 1 92 0
+ 152 000a 0023     		movs	r3, #0
+ 153 000c 1A46     		mov	r2, r3
+ 154 000e 2146     		mov	r1, r4
+ 155 0010 0648     		ldr	r0, .L12
+ 156 0012 0068     		ldr	r0, [r0]
+ 157 0014 FFF7FEFF 		bl	xQueueGenericSend
+ 158              	.LVL13:
+ 159 0018 0446     		mov	r4, r0
+ 160              	.LVL14:
+  93:Src/ledTask.c ****     return ret;
+ 161              		.loc 1 93 0
+ 162 001a 4FF48061 		mov	r1, #1024
+ 163 001e 044B     		ldr	r3, .L12+4
+ 164 0020 1868     		ldr	r0, [r3]
+ 165              	.LVL15:
+ 166 0022 FFF7FEFF 		bl	osSignalSet
+ 167              	.LVL16:
+  95:Src/ledTask.c **** 
+ 168              		.loc 1 95 0
+ 169 0026 2046     		mov	r0, r4
+ARM GAS  /tmp/ccfYCR6f.s 			page 10
+
+
+ 170 0028 04B0     		add	sp, sp, #16
+ 171              	.LCFI3:
+ 172              		.cfi_def_cfa_offset 8
+ 173              		@ sp needed
+ 174 002a 10BD     		pop	{r4, pc}
+ 175              	.LVL17:
+ 176              	.L13:
+ 177              		.align	2
+ 178              	.L12:
+ 179 002c 00000000 		.word	.LANCHOR0
+ 180 0030 00000000 		.word	lEDTaskHandle
+ 181              		.cfi_endproc
+ 182              	.LFE8:
+ 184              		.section	.text.ledSendSimpleEvent,"ax",%progbits
+ 185              		.align	1
+ 186              		.global	ledSendSimpleEvent
+ 187              		.syntax unified
+ 188              		.thumb
+ 189              		.thumb_func
+ 190              		.fpu fpv5-sp-d16
+ 192              	ledSendSimpleEvent:
+ 193              	.LFB9:
+  97:Src/ledTask.c ****     LED_MSG msg;
+ 194              		.loc 1 97 0
+ 195              		.cfi_startproc
+ 196              		@ args = 0, pretend = 0, frame = 16
+ 197              		@ frame_needed = 0, uses_anonymous_args = 0
+ 198              	.LVL18:
+ 199 0000 00B5     		push	{lr}
+ 200              	.LCFI4:
+ 201              		.cfi_def_cfa_offset 4
+ 202              		.cfi_offset 14, -4
+ 203 0002 85B0     		sub	sp, sp, #20
+ 204              	.LCFI5:
+ 205              		.cfi_def_cfa_offset 24
+  99:Src/ledTask.c ****     msg.ack = ack;
+ 206              		.loc 1 99 0
+ 207 0004 8DF80000 		strb	r0, [sp]
+ 100:Src/ledTask.c ****     msg.nData = data;
+ 208              		.loc 1 100 0
+ 209 0008 8DF80220 		strb	r2, [sp, #2]
+ 101:Src/ledTask.c ****     msg.pData = NULL;
+ 210              		.loc 1 101 0
+ 211 000c 0191     		str	r1, [sp, #4]
+ 102:Src/ledTask.c ****     msg.len = 0;
+ 212              		.loc 1 102 0
+ 213 000e 0023     		movs	r3, #0
+ 214 0010 0293     		str	r3, [sp, #8]
+ 103:Src/ledTask.c ****     ledSendEvent(msg);
+ 215              		.loc 1 103 0
+ 216 0012 8DF80130 		strb	r3, [sp, #1]
+ 104:Src/ledTask.c **** }
+ 217              		.loc 1 104 0
+ 218 0016 04AB     		add	r3, sp, #16
+ 219 0018 13E90F00 		ldmdb	r3, {r0, r1, r2, r3}
+ 220              	.LVL19:
+ 221 001c FFF7FEFF 		bl	ledSendEvent
+ARM GAS  /tmp/ccfYCR6f.s 			page 11
+
+
+ 222              	.LVL20:
+ 105:Src/ledTask.c **** 
+ 223              		.loc 1 105 0
+ 224 0020 05B0     		add	sp, sp, #20
+ 225              	.LCFI6:
+ 226              		.cfi_def_cfa_offset 4
+ 227              	.LVL21:
+ 228              		@ sp needed
+ 229 0022 5DF804FB 		ldr	pc, [sp], #4
+ 230              		.cfi_endproc
+ 231              	.LFE9:
+ 233              		.section	.text.ledCmdHandler,"ax",%progbits
+ 234              		.align	1
+ 235              		.syntax unified
+ 236              		.thumb
+ 237              		.thumb_func
+ 238              		.fpu fpv5-sp-d16
+ 240              	ledCmdHandler:
+ 241              	.LFB12:
+ 149:Src/ledTask.c **** 
+ 150:Src/ledTask.c **** 
+ 151:Src/ledTask.c **** /* 
+ 152:Src/ledTask.c ****  * step1 : Implement command handler
+ 153:Src/ledTask.c ****  * step2 : make command dispatcher
+ 154:Src/ledTask.c **** */
+ 155:Src/ledTask.c **** static void ledCmdHandler(LED_MSG *msg) {
+ 242              		.loc 1 155 0
+ 243              		.cfi_startproc
+ 244              		@ args = 0, pretend = 0, frame = 0
+ 245              		@ frame_needed = 0, uses_anonymous_args = 0
+ 246              	.LVL22:
+ 247 0000 10B5     		push	{r4, lr}
+ 248              	.LCFI7:
+ 249              		.cfi_def_cfa_offset 8
+ 250              		.cfi_offset 4, -8
+ 251              		.cfi_offset 14, -4
+ 252 0002 0446     		mov	r4, r0
+ 156:Src/ledTask.c ****     int result;
+ 157:Src/ledTask.c ****     switch (msg->cmd ) {
+ 253              		.loc 1 157 0
+ 254 0004 0178     		ldrb	r1, [r0]	@ zero_extendqisi2
+ 255 0006 4B1E     		subs	r3, r1, #1
+ 256 0008 052B     		cmp	r3, #5
+ 257 000a 09D8     		bhi	.L16
+ 258 000c DFE803F0 		tbb	[pc, r3]
+ 259              	.L19:
+ 260 0010 03       		.byte	(.L18-.L19)/2
+ 261 0011 08       		.byte	(.L16-.L19)/2
+ 262 0012 12       		.byte	(.L20-.L19)/2
+ 263 0013 19       		.byte	(.L21-.L19)/2
+ 264 0014 08       		.byte	(.L16-.L19)/2
+ 265 0015 28       		.byte	(.L22-.L19)/2
+ 266              		.p2align 1
+ 267              	.L18:
+ 158:Src/ledTask.c ****         case LED_EVT_ON_REQ:
+ 159:Src/ledTask.c ****             /* acknowledged */
+ 160:Src/ledTask.c ****             if (msg->ack) {
+ARM GAS  /tmp/ccfYCR6f.s 			page 12
+
+
+ 268              		.loc 1 160 0
+ 269 0016 8378     		ldrb	r3, [r0, #2]	@ zero_extendqisi2
+ 270 0018 1BB9     		cbnz	r3, .L26
+ 271              	.LVL23:
+ 272              	.L23:
+ 161:Src/ledTask.c ****                 ledSetAckInfo(msg->taskId, msg->cmd);
+ 162:Src/ledTask.c ****                 ledSendSimpleEvent(LED_EVT_ON_ACK, 0, 0);
+ 163:Src/ledTask.c ****             }
+ 164:Src/ledTask.c ****             /* turn on led*/
+ 165:Src/ledTask.c ****             ledTurnOn(msg->ack);
+ 273              		.loc 1 165 0
+ 274 001a A078     		ldrb	r0, [r4, #2]	@ zero_extendqisi2
+ 275 001c FFF7FEFF 		bl	ledTurnOn
+ 276              	.LVL24:
+ 277              	.L16:
+ 166:Src/ledTask.c ****             break;
+ 167:Src/ledTask.c **** 
+ 168:Src/ledTask.c ****         case LED_EVT_ON_ACK:
+ 169:Src/ledTask.c ****             break;
+ 170:Src/ledTask.c **** 
+ 171:Src/ledTask.c ****         case LED_EVT_ON_RSP:
+ 172:Src/ledTask.c ****             /* response to clinet */
+ 173:Src/ledTask.c ****             ledNotifyToClient(LED_EVT_ON_REQ);
+ 174:Src/ledTask.c **** 
+ 175:Src/ledTask.c ****             /* clear ack flag */
+ 176:Src/ledTask.c ****             ledClearAckInfo(msg->cmd);
+ 177:Src/ledTask.c ****             break;
+ 178:Src/ledTask.c **** 
+ 179:Src/ledTask.c ****         case LED_EVT_OFF_REQ:
+ 180:Src/ledTask.c ****             /* acknowledged */
+ 181:Src/ledTask.c ****             if (msg->ack) {
+ 182:Src/ledTask.c ****                 ledSetAckInfo(msg->taskId, msg->cmd);
+ 183:Src/ledTask.c ****                 ledSendSimpleEvent(LED_EVT_OFF_ACK, 0, 0);
+ 184:Src/ledTask.c ****             }
+ 185:Src/ledTask.c ****             /* turn on led*/
+ 186:Src/ledTask.c ****             ledTurnOff(msg->ack);
+ 187:Src/ledTask.c ****             break;
+ 188:Src/ledTask.c ****         
+ 189:Src/ledTask.c ****         case LED_EVT_OFF_ACK:
+ 190:Src/ledTask.c ****             break;
+ 191:Src/ledTask.c **** 
+ 192:Src/ledTask.c ****         case LED_EVT_OFF_RSP:
+ 193:Src/ledTask.c ****             /* response to clinet */
+ 194:Src/ledTask.c ****             ledNotifyToClient(LED_EVT_OFF_REQ);
+ 195:Src/ledTask.c **** 
+ 196:Src/ledTask.c ****             /* clear ack flag */
+ 197:Src/ledTask.c ****             ledClearAckInfo(msg->cmd);
+ 198:Src/ledTask.c ****             break;
+ 199:Src/ledTask.c **** 
+ 200:Src/ledTask.c ****         default:
+ 201:Src/ledTask.c ****             break;
+ 202:Src/ledTask.c ****     }
+ 203:Src/ledTask.c **** }
+ 278              		.loc 1 203 0
+ 279 0020 10BD     		pop	{r4, pc}
+ 280              	.LVL25:
+ 281              	.L26:
+ARM GAS  /tmp/ccfYCR6f.s 			page 13
+
+
+ 161:Src/ledTask.c ****                 ledSetAckInfo(msg->taskId, msg->cmd);
+ 282              		.loc 1 161 0
+ 283 0022 C068     		ldr	r0, [r0, #12]
+ 284              	.LVL26:
+ 285 0024 FFF7FEFF 		bl	ledSetAckInfo
+ 286              	.LVL27:
+ 162:Src/ledTask.c ****             }
+ 287              		.loc 1 162 0
+ 288 0028 0022     		movs	r2, #0
+ 289 002a 1146     		mov	r1, r2
+ 290 002c 0220     		movs	r0, #2
+ 291 002e FFF7FEFF 		bl	ledSendSimpleEvent
+ 292              	.LVL28:
+ 293 0032 F2E7     		b	.L23
+ 294              	.LVL29:
+ 295              	.L20:
+ 173:Src/ledTask.c **** 
+ 296              		.loc 1 173 0
+ 297 0034 0120     		movs	r0, #1
+ 298              	.LVL30:
+ 299 0036 FFF7FEFF 		bl	ledNotifyToClient
+ 300              	.LVL31:
+ 176:Src/ledTask.c ****             break;
+ 301              		.loc 1 176 0
+ 302 003a 2078     		ldrb	r0, [r4]	@ zero_extendqisi2
+ 303 003c FFF7FEFF 		bl	ledClearAckInfo
+ 304              	.LVL32:
+ 177:Src/ledTask.c **** 
+ 305              		.loc 1 177 0
+ 306 0040 EEE7     		b	.L16
+ 307              	.LVL33:
+ 308              	.L21:
+ 181:Src/ledTask.c ****                 ledSetAckInfo(msg->taskId, msg->cmd);
+ 309              		.loc 1 181 0
+ 310 0042 8378     		ldrb	r3, [r0, #2]	@ zero_extendqisi2
+ 311 0044 1BB9     		cbnz	r3, .L27
+ 312              	.LVL34:
+ 313              	.L24:
+ 186:Src/ledTask.c ****             break;
+ 314              		.loc 1 186 0
+ 315 0046 A078     		ldrb	r0, [r4, #2]	@ zero_extendqisi2
+ 316 0048 FFF7FEFF 		bl	ledTurnOff
+ 317              	.LVL35:
+ 187:Src/ledTask.c ****         
+ 318              		.loc 1 187 0
+ 319 004c E8E7     		b	.L16
+ 320              	.LVL36:
+ 321              	.L27:
+ 182:Src/ledTask.c ****                 ledSendSimpleEvent(LED_EVT_OFF_ACK, 0, 0);
+ 322              		.loc 1 182 0
+ 323 004e C068     		ldr	r0, [r0, #12]
+ 324              	.LVL37:
+ 325 0050 FFF7FEFF 		bl	ledSetAckInfo
+ 326              	.LVL38:
+ 183:Src/ledTask.c ****             }
+ 327              		.loc 1 183 0
+ 328 0054 0022     		movs	r2, #0
+ARM GAS  /tmp/ccfYCR6f.s 			page 14
+
+
+ 329 0056 1146     		mov	r1, r2
+ 330 0058 0520     		movs	r0, #5
+ 331 005a FFF7FEFF 		bl	ledSendSimpleEvent
+ 332              	.LVL39:
+ 333 005e F2E7     		b	.L24
+ 334              	.LVL40:
+ 335              	.L22:
+ 194:Src/ledTask.c **** 
+ 336              		.loc 1 194 0
+ 337 0060 0420     		movs	r0, #4
+ 338              	.LVL41:
+ 339 0062 FFF7FEFF 		bl	ledNotifyToClient
+ 340              	.LVL42:
+ 197:Src/ledTask.c ****             break;
+ 341              		.loc 1 197 0
+ 342 0066 2078     		ldrb	r0, [r4]	@ zero_extendqisi2
+ 343 0068 FFF7FEFF 		bl	ledClearAckInfo
+ 344              	.LVL43:
+ 345              		.loc 1 203 0
+ 346 006c D8E7     		b	.L16
+ 347              		.cfi_endproc
+ 348              	.LFE12:
+ 350              		.section	.text.ledTaskInit,"ax",%progbits
+ 351              		.align	1
+ 352              		.global	ledTaskInit
+ 353              		.syntax unified
+ 354              		.thumb
+ 355              		.thumb_func
+ 356              		.fpu fpv5-sp-d16
+ 358              	ledTaskInit:
+ 359              	.LFB13:
+ 204:Src/ledTask.c **** 
+ 205:Src/ledTask.c **** 
+ 206:Src/ledTask.c **** 
+ 207:Src/ledTask.c **** void ledTaskInit(void) {
+ 360              		.loc 1 207 0
+ 361              		.cfi_startproc
+ 362              		@ args = 0, pretend = 0, frame = 8
+ 363              		@ frame_needed = 0, uses_anonymous_args = 0
+ 364 0000 00B5     		push	{lr}
+ 365              	.LCFI8:
+ 366              		.cfi_def_cfa_offset 4
+ 367              		.cfi_offset 14, -4
+ 368 0002 83B0     		sub	sp, sp, #12
+ 369              	.LCFI9:
+ 370              		.cfi_def_cfa_offset 16
+ 208:Src/ledTask.c ****     ledInit();
+ 371              		.loc 1 208 0
+ 372 0004 FFF7FEFF 		bl	ledInit
+ 373              	.LVL44:
+ 209:Src/ledTask.c **** 
+ 210:Src/ledTask.c ****     /* create task queue */
+ 211:Src/ledTask.c ****     lEDReceiveMsgQueue = xQueueCreate(LED_MAX_Q_SIZE, sizeof(LED_MSG));
+ 374              		.loc 1 211 0
+ 375 0008 0022     		movs	r2, #0
+ 376 000a 1021     		movs	r1, #16
+ 377 000c 0A20     		movs	r0, #10
+ARM GAS  /tmp/ccfYCR6f.s 			page 15
+
+
+ 378 000e FFF7FEFF 		bl	xQueueGenericCreate
+ 379              	.LVL45:
+ 380 0012 124B     		ldr	r3, .L35
+ 381 0014 1860     		str	r0, [r3]
+ 212:Src/ledTask.c ****     configASSERT(lEDReceiveMsgQueue);
+ 382              		.loc 1 212 0
+ 383 0016 50B9     		cbnz	r0, .L29
+ 384              	.LBB14:
+ 385              	.LBB15:
+ 386              		.loc 2 195 0
+ 387              		.syntax unified
+ 388              	@ 195 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h" 1
+ 389 0018 4FF05003 			mov r3, #80												
+ 390 001c 72B6     		cpsid i													
+ 391 001e 83F31188 		msr basepri, r3											
+ 392 0022 BFF36F8F 		isb														
+ 393 0026 BFF34F8F 		dsb														
+ 394 002a 62B6     		cpsie i													
+ 395              	
+ 396              	@ 0 "" 2
+ 397              	.LVL46:
+ 398              		.thumb
+ 399              		.syntax unified
+ 400              	.L30:
+ 401 002c FEE7     		b	.L30
+ 402              	.L29:
+ 403              	.LBE15:
+ 404              	.LBE14:
+ 213:Src/ledTask.c ****     
+ 214:Src/ledTask.c ****     /* mutex */
+ 215:Src/ledTask.c ****     osMutexDef(LedMutex);
+ 405              		.loc 1 215 0
+ 406 002e 0023     		movs	r3, #0
+ 407 0030 0093     		str	r3, [sp]
+ 408 0032 0193     		str	r3, [sp, #4]
+ 216:Src/ledTask.c ****     LEDMutexHandle = osMutexCreate(osMutex(LedMutex));
+ 409              		.loc 1 216 0
+ 410 0034 6846     		mov	r0, sp
+ 411 0036 FFF7FEFF 		bl	osMutexCreate
+ 412              	.LVL47:
+ 413 003a 094B     		ldr	r3, .L35+4
+ 414 003c 1860     		str	r0, [r3]
+ 217:Src/ledTask.c ****     configASSERT(LEDMutexHandle);
+ 415              		.loc 1 217 0
+ 416 003e 10B1     		cbz	r0, .L34
+ 218:Src/ledTask.c ****     
+ 219:Src/ledTask.c ****     /* create and start timer */
+ 220:Src/ledTask.c **** 
+ 221:Src/ledTask.c **** }
+ 417              		.loc 1 221 0
+ 418 0040 03B0     		add	sp, sp, #12
+ 419              	.LCFI10:
+ 420              		.cfi_remember_state
+ 421              		.cfi_def_cfa_offset 4
+ 422              		@ sp needed
+ 423 0042 5DF804FB 		ldr	pc, [sp], #4
+ 424              	.L34:
+ARM GAS  /tmp/ccfYCR6f.s 			page 16
+
+
+ 425              	.LCFI11:
+ 426              		.cfi_restore_state
+ 427              	.LBB16:
+ 428              	.LBB17:
+ 429              		.loc 2 195 0
+ 430              		.syntax unified
+ 431              	@ 195 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/portmacro.h" 1
+ 432 0046 4FF05003 			mov r3, #80												
+ 433 004a 72B6     		cpsid i													
+ 434 004c 83F31188 		msr basepri, r3											
+ 435 0050 BFF36F8F 		isb														
+ 436 0054 BFF34F8F 		dsb														
+ 437 0058 62B6     		cpsie i													
+ 438              	
+ 439              	@ 0 "" 2
+ 440              	.LVL48:
+ 441              		.thumb
+ 442              		.syntax unified
+ 443              	.L32:
+ 444 005a FEE7     		b	.L32
+ 445              	.L36:
+ 446              		.align	2
+ 447              	.L35:
+ 448 005c 00000000 		.word	.LANCHOR0
+ 449 0060 00000000 		.word	LEDMutexHandle
+ 450              	.LBE17:
+ 451              	.LBE16:
+ 452              		.cfi_endproc
+ 453              	.LFE13:
+ 455              		.section	.text.StartLedTask,"ax",%progbits
+ 456              		.align	1
+ 457              		.global	StartLedTask
+ 458              		.syntax unified
+ 459              		.thumb
+ 460              		.thumb_func
+ 461              		.fpu fpv5-sp-d16
+ 463              	StartLedTask:
+ 464              	.LFB14:
+ 222:Src/ledTask.c **** 
+ 223:Src/ledTask.c **** /* USER CODE BEGIN Header_StartLedTask */
+ 224:Src/ledTask.c **** /**
+ 225:Src/ledTask.c ****   * @brief  Function implementing the LedTask thread.
+ 226:Src/ledTask.c ****   * @param  argument: Not used 
+ 227:Src/ledTask.c ****   * @retval None
+ 228:Src/ledTask.c ****   */
+ 229:Src/ledTask.c **** /* USER CODE END Header_StartLedTask */
+ 230:Src/ledTask.c **** void StartLedTask(void const * argument)
+ 231:Src/ledTask.c **** {
+ 465              		.loc 1 231 0
+ 466              		.cfi_startproc
+ 467              		@ Volatile: function does not return.
+ 468              		@ args = 0, pretend = 0, frame = 32
+ 469              		@ frame_needed = 0, uses_anonymous_args = 0
+ 470              	.LVL49:
+ 471 0000 00B5     		push	{lr}
+ 472              	.LCFI12:
+ 473              		.cfi_def_cfa_offset 4
+ARM GAS  /tmp/ccfYCR6f.s 			page 17
+
+
+ 474              		.cfi_offset 14, -4
+ 475 0002 89B0     		sub	sp, sp, #36
+ 476              	.LCFI13:
+ 477              		.cfi_def_cfa_offset 40
+ 478 0004 04E0     		b	.L40
+ 479              	.LVL50:
+ 480              	.L42:
+ 232:Src/ledTask.c ****     static BaseType_t xResult = 0;
+ 233:Src/ledTask.c ****     LED_MSG message;
+ 234:Src/ledTask.c ****     osEvent Event;
+ 235:Src/ledTask.c ****     
+ 236:Src/ledTask.c ****     for(;;)
+ 237:Src/ledTask.c ****     {
+ 238:Src/ledTask.c ****         Event = osSignalWait(TASK_NOTIFY_ALL_BITS, osWaitForever);
+ 239:Src/ledTask.c **** 
+ 240:Src/ledTask.c ****         if(Event.value.signals & LED_CMD_Q_SIG) {
+ 241:Src/ledTask.c ****             xResult = xQueueReceive(lEDReceiveMsgQueue, &(message),xTicksToWait);
+ 242:Src/ledTask.c **** 
+ 243:Src/ledTask.c ****             if (xResult == pdTRUE) {
+ 244:Src/ledTask.c ****                 ledCmdHandler(&message);
+ 481              		.loc 1 244 0
+ 482 0006 04A8     		add	r0, sp, #16
+ 483 0008 FFF7FEFF 		bl	ledCmdHandler
+ 484              	.LVL51:
+ 485              	.L38:
+ 245:Src/ledTask.c ****             } else {
+ 246:Src/ledTask.c ****                 printf("Error occured when getting data from rx queue\n");
+ 247:Src/ledTask.c ****             }
+ 248:Src/ledTask.c ****         }
+ 249:Src/ledTask.c **** 
+ 250:Src/ledTask.c ****         osThreadYield();
+ 486              		.loc 1 250 0
+ 487 000c FFF7FEFF 		bl	osThreadYield
+ 488              	.LVL52:
+ 489              	.L40:
+ 238:Src/ledTask.c **** 
+ 490              		.loc 1 238 0
+ 491 0010 4FF0FF32 		mov	r2, #-1
+ 492 0014 1146     		mov	r1, r2
+ 493 0016 01A8     		add	r0, sp, #4
+ 494 0018 FFF7FEFF 		bl	osSignalWait
+ 495              	.LVL53:
+ 240:Src/ledTask.c ****             xResult = xQueueReceive(lEDReceiveMsgQueue, &(message),xTicksToWait);
+ 496              		.loc 1 240 0
+ 497 001c 029B     		ldr	r3, [sp, #8]
+ 498 001e 13F4806F 		tst	r3, #1024
+ 499 0022 F3D0     		beq	.L38
+ 241:Src/ledTask.c **** 
+ 500              		.loc 1 241 0
+ 501 0024 0022     		movs	r2, #0
+ 502 0026 04A9     		add	r1, sp, #16
+ 503 0028 044B     		ldr	r3, .L43
+ 504 002a 1868     		ldr	r0, [r3]
+ 505 002c FFF7FEFF 		bl	xQueueReceive
+ 506              	.LVL54:
+ 243:Src/ledTask.c ****                 ledCmdHandler(&message);
+ 507              		.loc 1 243 0
+ARM GAS  /tmp/ccfYCR6f.s 			page 18
+
+
+ 508 0030 0128     		cmp	r0, #1
+ 509 0032 E8D0     		beq	.L42
+ 246:Src/ledTask.c ****             }
+ 510              		.loc 1 246 0
+ 511 0034 0248     		ldr	r0, .L43+4
+ 512 0036 FFF7FEFF 		bl	puts
+ 513              	.LVL55:
+ 514 003a E7E7     		b	.L38
+ 515              	.L44:
+ 516              		.align	2
+ 517              	.L43:
+ 518 003c 00000000 		.word	.LANCHOR0
+ 519 0040 00000000 		.word	.LC0
+ 520              		.cfi_endproc
+ 521              	.LFE14:
+ 523              		.comm	LEDTimerHandle,4,4
+ 524              		.comm	LEDMutexHandle,4,4
+ 525              		.global	lEDReceiveMsgQueue
+ 526              		.comm	lEDTaskHandle,4,4
+ 527              		.section	.bss.lEDReceiveMsgQueue,"aw",%nobits
+ 528              		.align	2
+ 529              		.set	.LANCHOR0,. + 0
+ 532              	lEDReceiveMsgQueue:
+ 533 0000 00000000 		.space	4
+ 534              		.section	.rodata.StartLedTask.str1.4,"aMS",%progbits,1
+ 535              		.align	2
+ 536              	.LC0:
+ 537 0000 4572726F 		.ascii	"Error occured when getting data from rx queue\000"
+ 537      72206F63 
+ 537      63757265 
+ 537      64207768 
+ 537      656E2067 
+ 538              		.text
+ 539              	.Letext0:
+ 540              		.file 3 "/usr/include/newlib/machine/_default_types.h"
+ 541              		.file 4 "/usr/include/newlib/sys/lock.h"
+ 542              		.file 5 "/usr/include/newlib/sys/_types.h"
+ 543              		.file 6 "/usr/lib/gcc/arm-none-eabi/7.3.1/include/stddef.h"
+ 544              		.file 7 "/usr/include/newlib/sys/reent.h"
+ 545              		.file 8 "/usr/include/newlib/sys/_stdint.h"
+ 546              		.file 9 "Core/Inc/FreeRTOSConfig.h"
+ 547              		.file 10 "Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h"
+ 548              		.file 11 "Middlewares/Third_Party/FreeRTOS/Source/include/task.h"
+ 549              		.file 12 "Middlewares/Third_Party/FreeRTOS/Source/include/timers.h"
+ 550              		.file 13 "Middlewares/Third_Party/FreeRTOS/Source/include/queue.h"
+ 551              		.file 14 "Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h"
+ 552              		.file 15 "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h"
+ 553              		.file 16 "Inc/led.h"
+ 554              		.file 17 "<built-in>"
+ARM GAS  /tmp/ccfYCR6f.s 			page 19
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 ledTask.c
+     /tmp/ccfYCR6f.s:18     .text.ledNotifyToClient:0000000000000000 $t
+     /tmp/ccfYCR6f.s:24     .text.ledNotifyToClient:0000000000000000 ledNotifyToClient
+     /tmp/ccfYCR6f.s:122    .text.ledNotifyToClient:0000000000000068 $d
+                            *COM*:0000000000000004 LEDMutexHandle
+     /tmp/ccfYCR6f.s:127    .text.ledSendEvent:0000000000000000 $t
+     /tmp/ccfYCR6f.s:134    .text.ledSendEvent:0000000000000000 ledSendEvent
+     /tmp/ccfYCR6f.s:179    .text.ledSendEvent:000000000000002c $d
+                            *COM*:0000000000000004 lEDTaskHandle
+     /tmp/ccfYCR6f.s:185    .text.ledSendSimpleEvent:0000000000000000 $t
+     /tmp/ccfYCR6f.s:192    .text.ledSendSimpleEvent:0000000000000000 ledSendSimpleEvent
+     /tmp/ccfYCR6f.s:234    .text.ledCmdHandler:0000000000000000 $t
+     /tmp/ccfYCR6f.s:240    .text.ledCmdHandler:0000000000000000 ledCmdHandler
+     /tmp/ccfYCR6f.s:260    .text.ledCmdHandler:0000000000000010 $d
+     /tmp/ccfYCR6f.s:266    .text.ledCmdHandler:0000000000000016 $t
+     /tmp/ccfYCR6f.s:351    .text.ledTaskInit:0000000000000000 $t
+     /tmp/ccfYCR6f.s:358    .text.ledTaskInit:0000000000000000 ledTaskInit
+     /tmp/ccfYCR6f.s:448    .text.ledTaskInit:000000000000005c $d
+     /tmp/ccfYCR6f.s:456    .text.StartLedTask:0000000000000000 $t
+     /tmp/ccfYCR6f.s:463    .text.StartLedTask:0000000000000000 StartLedTask
+     /tmp/ccfYCR6f.s:518    .text.StartLedTask:000000000000003c $d
+                            *COM*:0000000000000004 LEDTimerHandle
+     /tmp/ccfYCR6f.s:532    .bss.lEDReceiveMsgQueue:0000000000000000 lEDReceiveMsgQueue
+     /tmp/ccfYCR6f.s:528    .bss.lEDReceiveMsgQueue:0000000000000000 $d
+     /tmp/ccfYCR6f.s:535    .rodata.StartLedTask.str1.4:0000000000000000 $d
+
+UNDEFINED SYMBOLS
+osMutexWait
+ledGetClientTaskId
+eTaskGetState
+xTaskGenericNotify
+osMutexRelease
+xQueueGenericSend
+osSignalSet
+ledTurnOn
+ledSetAckInfo
+ledClearAckInfo
+ledTurnOff
+ledInit
+xQueueGenericCreate
+osMutexCreate
+osThreadYield
+osSignalWait
+xQueueReceive
+puts
