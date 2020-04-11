@@ -29,6 +29,9 @@
 /****************************************************************************/
 #define TASK_NOTIFY_ALL_BITS 0xFFFFFFFF
 
+
+#define LED_T1_EXPIRED        10
+
 /****************************************************************************/
 /** **/
 /** TYPEDEFS AND STRUCTURES **/
@@ -58,8 +61,10 @@ osThreadId lEDTaskHandle;
 QueueHandle_t lEDReceiveMsgQueue = NULL;
 /* Mutex */
 osMutexId LEDMutexHandle;
+
 /* Timer */
-osTimerId LEDTimerHandle;
+// T1 Timer : timer that monitoring command was successfully executed or not
+osTimerId LedT1TimerHandle;
 
 /****************************************************************************/
 /** **/
@@ -89,7 +94,39 @@ void StartLedTask(void const * argument);
 /****************************************************************************/
 void ledSendSimpleEvent(LED_EVENT Evt, int data, unsigned char ack);
 
+/* Timer */
+static void LedT1TimerHandleCallback(void const *arg) {
+    ledSendSimpleEvent(LED_EVT_TIMER_EXPIRED_NOTI, 0, 0);
+}
 
+
+static void LedCreateTimer(void) {
+    osTimerDef(LEDTimer, LedT1TimerHandleCallback);
+    LedT1TimerHandle = osTimerCreate(osTimer(LEDTimer), osTimerPeriodic,  NULL);
+}
+
+
+static void LedDeleteTimer(void) {
+    osTimerDelete(LedT1TimerHandle);
+}
+
+
+static void LedStartTimer(void) {
+    osTimerStart(LedT1TimerHandle, LED_T1_EXPIRED);
+}
+
+
+static void LedStopTimer(void) {
+    osTimerStop(LedT1TimerHandle);
+}
+
+
+static BaseType_t LEDIsTimerActive(void) {
+    return xTimerIsTimerActive(LedT1TimerHandle);
+}
+
+
+/* service functions */
 BaseType_t ledSendEvent(LED_MSG message) {
     BaseType_t ret = 0;
     ret = xQueueSendToBack(lEDReceiveMsgQueue, &message, xTicksToWait);
@@ -162,6 +199,11 @@ static void ledCmdHandler(LED_MSG *msg) {
             if (msg->ack) {
                 ledSetAckInfo(msg->taskId, msg->cmd);
                 ledSendSimpleEvent(LED_EVT_ON_ACK, 0, 0);
+
+                /* if timer is working then stop and reloading... */
+                if (LEDIsTimerActive())
+                    LedStopTimer();
+                LedStartTimer();
             }
             /* turn on led*/
             ledTurnOn(msg->ack);
@@ -171,6 +213,10 @@ static void ledCmdHandler(LED_MSG *msg) {
             break;
 
         case LED_EVT_ON_RSP:
+            /* stop timer */
+            if (LEDIsTimerActive)
+                LedStopTimer();
+
             /* response to clinet */
             ledNotifyToClient(LED_EVT_ON_REQ);
 
@@ -183,6 +229,11 @@ static void ledCmdHandler(LED_MSG *msg) {
             if (msg->ack) {
                 ledSetAckInfo(msg->taskId, msg->cmd);
                 ledSendSimpleEvent(LED_EVT_OFF_ACK, 0, 0);
+
+                /* if timer is working then stop and reloading... */
+                if (LEDIsTimerActive())
+                    LedStopTimer();
+                LedStartTimer();
             }
             /* turn on led*/
             ledTurnOff(msg->ack);
@@ -192,11 +243,20 @@ static void ledCmdHandler(LED_MSG *msg) {
             break;
 
         case LED_EVT_OFF_RSP:
+            /* stop timer */
+            if (LEDIsTimerActive)
+                LedStopTimer();
+
             /* response to clinet */
             ledNotifyToClient(LED_EVT_OFF_REQ);
 
             /* clear ack flag */
             ledClearAckInfo(msg->cmd);
+            break;
+
+        case LED_EVT_TIMER_EXPIRED_NOTI:
+            /* never happend! */
+            configASSERT(0);
             break;
 
         default:
@@ -216,16 +276,18 @@ void ledTaskInit(void) {
     LEDMutexHandle = osMutexCreate(osMutex(LedMutex));
     configASSERT(LEDMutexHandle);
     
-    /* create and start timer */
-
+    /* create timer */
+    LedCreateTimer();
 }
 
 
-void StartLedTask(void const * argument)
+void ledTask(void const * argument)
 {
     static BaseType_t xResult = 0;
     LED_MSG message;
     osEvent Event;
+
+    ledTaskInit();
     
     for(;;)
     {

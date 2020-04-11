@@ -112,7 +112,8 @@ Middlewares/ST/STM32_USB_Host_Library/Core/Src/usbh_ioreq.c \
 Middlewares/ST/STM32_USB_Host_Library/Core/Src/usbh_pipes.c \
 Middlewares/ST/STM32_USB_Host_Library/Class/CDC/Src/usbh_cdc.c \
 Src/led.c \
-Src/ledTask.c
+Src/ledTask.c \
+Src/clientTask.c
 
 # ASM sources
 ASM_SOURCES =  \
